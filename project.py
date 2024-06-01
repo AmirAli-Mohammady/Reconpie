@@ -7,10 +7,10 @@ import argparse
 import csv
 from whois import whois
 
-def step1(url, depth, current_depth=0, links=[], seen=set()):
+def step1(url, depth, current_depth=0,links=[],seen=set()):
     if url in seen or current_depth > depth:
         return links
-    
+
     seen.add(url)
     
     try:
@@ -24,7 +24,6 @@ def step1(url, depth, current_depth=0, links=[], seen=set()):
                     links += step1(href, depth, current_depth + 1, links, seen)
     except Exception as e:
         print(f"Error processing URL: {url}, Error: {e}")
-    
     return links
 
 def step2(url):
@@ -53,10 +52,9 @@ def step2(url):
 def step3(url):
     try:
         r = requests.get(url)
-        print(r.status_code)
         soup = BeautifulSoup(r.content, 'html.parser')
-        title = soup.title.string
-        return title
+        title = soup.title.string   
+        return title,(r.status_code)
     except Exception as e:
         print(f"Error getting title for URL: {url}, Error: {e}")
 
@@ -66,10 +64,10 @@ def step4(url):
     return f"The IP address of {domain} is {ip_address}"
 
 def step5(url):
-    ip = socket.gethostbyname(socket.gethostname(url))
+    ip = socket.gethostbyname(url)
     for port in range(65535):
         try:
-            serv = socket.socket(socket.AF_INET,socket.SOCK_STREAM)  # create a new socket
+            serv = socket.socket(socket.AF_INET,socket.SOCK_STREAM)  
             serv.bind((ip,port))            
             serv.close()
         except:
@@ -101,41 +99,34 @@ def step7(url):
 
 def step8():
     parser = argparse.ArgumentParser(description="Process some inputs.")
-    parser.add_argument('--number', type=int, help='process a number.')
     parser.add_argument('--text', type=str, help='process some text')
-    parser.add_argument('--flag', action='store_true', default=False, help='set a flag')
-    parser.add_argument('files', nargs='*', help='process one or more files')
     args = parser.parse_args()
-    if args.number is not None:
-        return f"Processing number: {args.number}"
     if args.text is not None:
-        return f"Processing text: {args.text}"
-    if args.flag:
-        return "Flag is set"
-    if args.files:
-        return f"Processing {len(args.files)} file(s): {', '.join(args.files)}"
+        print(f"Processing text: {args.text}")
+    return args.text    
 
-url = input("Enter your URL: ")
+url = step8()
 depth = 2
-result1 = step1(url,)
+result1 = step1('https://'+url,depth)
 result2 = step2(url)
-result3 = step3(url)
+result3 = step3('https://'+url)
 result4 = step4(url)
-result5 = step5(url)
+result5 = step5('https://'+url)
 result6 = regex(url)
 result7 = step7(url)
-result8 = step8()
 
-# data to be written to csv file
-data = [[result1], [result2], [result3], [result4], [result5], [result6], [result7], [result8]]
 
-# name of csv file
-filename = "output.txt"
+def report( result1,result2,result3,result4,result5,result6,result7,result8 ):
+    filename = "output.txt"
 
-# writing to csv file
-with open(filename, 'w') as csvfile:
-    # creating a csv writer object
-    csvwriter = csv.writer(csvfile)
-
-    # writing the data rows
-    csvwriter.writerows(data)
+    with open(filename, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerows(result1)
+        csvwriter.writerows(result2)
+        csvwriter.writerows(result3)
+        csvwriter.writerows(result4)
+        csvwriter.writerows(result5)
+        csvwriter.writerows(result6)
+        csvwriter.writerows(result7)
+        csvwriter.writerows(result8)
+report()
