@@ -1,14 +1,17 @@
 import requests
-from bs4 import BeautifulSoup
 import dns.resolver
-import re
 import socket
-from whois import whois
+import re
+from bs4 import BeautifulSoup
 import argparse
-def step1(url, depth, current_depth=1):
-    links = []
-    if current_depth > depth:
+import csv
+from whois import whois
+
+def step1(url, depth, current_depth=0, links=[], seen=set()):
+    if url in seen or current_depth > depth:
         return links
+    
+    seen.add(url)
     
     try:
         x = requests.get(url)
@@ -18,28 +21,17 @@ def step1(url, depth, current_depth=1):
             if href is not None and href.startswith("http"):
                 links.append(href)
                 if current_depth < depth:
-                    links += step1(href, depth, current_depth + 1)
-    except:
-        pass
+                    links += step1(href, depth, current_depth + 1, links, seen)
+    except Exception as e:
+        print(f"Error processing URL: {url}, Error: {e}")
     
     return links
-
-url = input("Enter your URL: ")
-depth = 2
-result = step1(url, depth)
-for link in result:
-    print(link)
-##step1 complited!!!!!
-
-print("--------------------------------------------------------------------------------")
-
-import dns.resolver
 
 def step2(url):
     domain = url
     with open("subdomain.txt", "r") as f:
+        #strip baraye hazf space
         subdomain = f.read().strip()
-
     results = []
     try:
         ns = dns.resolver.resolve(domain, 'NS')
@@ -56,15 +48,7 @@ def step2(url):
     except Exception as e:
         error_msg = f"Error resolving name servers for {domain}: {e}"
         results.append(error_msg)
-
     return results
-
-url = input("Enter your URL: ")
-result = step2(url)
-for sub in result:
-    print(sub)
-#step2 complited!!!!!!!!!!!!!!!
-print("--------------------------------------------------------------------------------")
 
 def step3(url):
     try:
@@ -72,82 +56,48 @@ def step3(url):
         print(r.status_code)
         soup = BeautifulSoup(r.content, 'html.parser')
         title = soup.title.string
-        print(title)
-    except:
-        pass
-step3(url)
-#step3 complited!!!!!!!!!!!!!
-
-
-print("--------------------------------------------------------------------------------")
+        return title
+    except Exception as e:
+        print(f"Error getting title for URL: {url}, Error: {e}")
 
 def step4(url):
     domain = url
     ip_address = socket.gethostbyname(domain)
-    print(f"The IP address of {domain} is {ip_address}")
-step4(url)
-# step4 complited!!!!!!!!!!!!!!!!!!
+    return f"The IP address of {domain} is {ip_address}"
 
-print("--------------------------------------------------------------------------------")
-
-def step5and6(url):
-    ip = socket.gethostbyname (socket.gethostname()) 
-    for port in range(65535): 
+def step5(url):
+    ip = socket.gethostbyname(socket.gethostname(url))
+    for port in range(65535):
         try:
-            serv = socket.socket(socket.AF_INET,socket.SOCK_STREAM) # create a new socket
+            serv = socket.socket(socket.AF_INET,socket.SOCK_STREAM)  # create a new socket
             serv.bind((ip,port))            
+            serv.close()
         except:
-            print('[OPEN] Port open :',port) 
-        serv.close() 
-step5and6(url)
-#step 5 comlited!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-
-
-
-
-
-
-
-print("--------------------------------------------------------------------------------")
-
-
-
-
-
-import re
-from urllib.request import urlopen
+            return '[OPEN] Port open :', port
 
 def regex(url):
     try:
-        response = urlopen('http://' + url)
-        content = response.read().decode('utf-8')
+        response = requests.get('http://' + url)
+        content = response.text
         email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         email = re.search(email_pattern, content)
         if email:
-            print("Email found:", email.group())
-        else:
-            print("No email found")
+            return "Email found:", email.group()
+        if email is None:
+            return "No email found"
         phone_pattern = r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"
         phone = re.search(phone_pattern, content)
         if phone:
-            print("Phone number found:", phone.group())
+            return "Phone number found:", phone.group()
         else:
-            print("No phone number found")
+            return "No phone number found"
     except Exception as e:
-        print("Error accessing URL:", e)
-regex(url)
-#step 6 comlited!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-print("--------------------------------------------------------------------------------")
+        print(f"Error accessing URL: {url}, Error: {e}")
 
 def step7(url):
     domain = url
     result = whois(domain)
-    print(result)
-step7(url)
-#step7 complited
-print("--------------------------------------------------------------------------------")
-
-
+    return result
 
 def step8():
     parser = argparse.ArgumentParser(description="Process some inputs.")
@@ -157,20 +107,35 @@ def step8():
     parser.add_argument('files', nargs='*', help='process one or more files')
     args = parser.parse_args()
     if args.number is not None:
-        print(f"Processing number: {args.number}")
+        return f"Processing number: {args.number}"
     if args.text is not None:
-        print(f"Processing text: {args.text}")
+        return f"Processing text: {args.text}"
     if args.flag:
-        print("Flag is set")
+        return "Flag is set"
     if args.files:
-        print(f"Processing {len(args.files)} file(s): {', '.join(args.files)}")
-step8()
+        return f"Processing {len(args.files)} file(s): {', '.join(args.files)}"
 
+url = input("Enter your URL: ")
+depth = 2
+result1 = step1(url,)
+result2 = step2(url)
+result3 = step3(url)
+result4 = step4(url)
+result5 = step5(url)
+result6 = regex(url)
+result7 = step7(url)
+result8 = step8()
 
+# data to be written to csv file
+data = [[result1], [result2], [result3], [result4], [result5], [result6], [result7], [result8]]
 
+# name of csv file
+filename = "output.txt"
 
+# writing to csv file
+with open(filename, 'w') as csvfile:
+    # creating a csv writer object
+    csvwriter = csv.writer(csvfile)
 
-
-
-
-########################################################################333
+    # writing the data rows
+    csvwriter.writerows(data)
